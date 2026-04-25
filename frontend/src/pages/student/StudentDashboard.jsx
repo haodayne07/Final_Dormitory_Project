@@ -91,6 +91,7 @@ export default function StudentDashboard() {
   }, [location.search, navigate]);
 
   const formatCurrency = (amount) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  const getGenderLabel = (value) => value === 'female' ? 'Female' : 'Male';
 
   const handleRequestRoom = () => {
     setSubmitting(true);
@@ -117,8 +118,12 @@ export default function StudentDashboard() {
   const handlePayment = () => {
     setPaying(true);
     
-    // Get real bill ID returned from database
-    const billId = data.billing.id || 1;
+    const billId = data.billing.id;
+    if (!billId) {
+      setToast({ open: true, message: 'No payable bill was found for your account.', type: 'error' });
+      setPaying(false);
+      return;
+    }
 
     axios.post('http://127.0.0.1:5000/api/payments/create_momo_payment', {
       bill_id: billId
@@ -238,10 +243,11 @@ export default function StudentDashboard() {
                       {formatCurrency(room.price)} / month
                     </Typography>
                   </Box>
-                  <Stack direction="row" alignItems="center" spacing={1.5} color="#64748b" sx={{ fontSize: '14px' }}>
+                  <Stack direction="row" alignItems="center" spacing={1.5} color="#64748b" sx={{ fontSize: '14px', flexWrap: 'wrap', rowGap: 1 }}>
                     <Typography variant="body2" fontWeight="500">Capacity: {room.capacity} people</Typography>
                     <Typography variant="body2">•</Typography>
                     <Typography variant="body2" fontWeight="500">Available: {room.capacity - room.current_tenants}</Typography>
+                    <Chip label={`${getGenderLabel(room.gender_type)} room`} size="small" sx={{ bgcolor: room.gender_type === 'female' ? '#fce7f3' : '#dbeafe', color: room.gender_type === 'female' ? '#9d174d' : '#1e40af', fontWeight: 'bold' }} />
                   </Stack>
                 </CardContent>
               </Card>
@@ -272,6 +278,7 @@ export default function StudentDashboard() {
             )}
 
             <Typography variant="h5" fontWeight="bold" color="#ea580c" mb={1}>{formatCurrency(selectedRoom?.price)} <span style={{fontSize: '16px', color: '#64748b', fontWeight: 'normal'}}>/ student / month</span></Typography>
+            <Chip label={`${getGenderLabel(selectedRoom?.gender_type)} room`} size="small" sx={{ mb: 2, bgcolor: selectedRoom?.gender_type === 'female' ? '#fce7f3' : '#dbeafe', color: selectedRoom?.gender_type === 'female' ? '#9d174d' : '#1e40af', fontWeight: 'bold' }} />
             <Typography variant="body1" color="#64748b" mb={3}>Electricity and water bills will be calculated separately based on actual monthly consumption.</Typography>
             
             <Divider sx={{ my: 3 }} />
@@ -351,7 +358,7 @@ export default function StudentDashboard() {
                   <Stack direction="row" alignItems="center" spacing={3}>
                     <WarningAmberIcon sx={{ color: '#ef4444', fontSize: 40 }} />
                     <Box>
-                      <Typography variant="h5" fontWeight="bold" color="#991b1b" mb={0.5}>Unpaid bill for {data.billing.month}</Typography>
+                      <Typography variant="h5" fontWeight="bold" color="#991b1b" mb={0.5}>{data.billing.title || `Unpaid bill for ${data.billing.month}`}</Typography>
                       <Typography variant="body1" color="#b91c1c">Deadline: <strong>{data.billing.dueDate}</strong></Typography>
                     </Box>
                   </Stack>

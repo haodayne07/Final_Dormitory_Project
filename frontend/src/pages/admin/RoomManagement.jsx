@@ -19,6 +19,7 @@ export default function RoomManagement() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [priceFilter, setPriceFilter] = useState('all'); 
+  const [genderFilter, setGenderFilter] = useState('all');
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(5);
 
@@ -29,7 +30,7 @@ export default function RoomManagement() {
   const [imagePreview, setImagePreview] = useState('');
 
   const [formData, setFormData] = useState({ 
-    room_id: '', room_name: '', capacity: 4, price: 0, status: 'vacant', description: '' 
+    room_id: '', room_name: '', capacity: 4, price: 0, status: 'vacant', gender_type: 'male', description: '' 
   });
 
   const API_URL = 'http://127.0.0.1:5000/api/rooms';
@@ -53,12 +54,14 @@ export default function RoomManagement() {
   useEffect(() => { fetchRooms(); }, [fetchRooms]);
 
   const filteredRooms = rooms.filter(r => {
-    const matchText = r.room_name.toLowerCase().includes(searchTerm.toLowerCase()) || r.price.toString().includes(searchTerm);
+    const genderLabel = r.gender_type === 'female' ? 'female women' : 'male men';
+    const matchText = r.room_name.toLowerCase().includes(searchTerm.toLowerCase()) || r.price.toString().includes(searchTerm) || genderLabel.includes(searchTerm.toLowerCase());
     let matchPrice = true;
     if (priceFilter === 'under1m') matchPrice = r.price < 1000000;
     else if (priceFilter === '1m_to_2m') matchPrice = r.price >= 1000000 && r.price <= 2000000;
     else if (priceFilter === 'over2m') matchPrice = r.price > 2000000;
-    return matchText && matchPrice;
+    const matchGender = genderFilter === 'all' || r.gender_type === genderFilter;
+    return matchText && matchPrice && matchGender;
   });
 
   const handleOpenModal = (room = null) => {
@@ -67,12 +70,12 @@ export default function RoomManagement() {
       setIsEditMode(true);
       setFormData({ 
         room_id: room.room_id, room_name: room.room_name, capacity: room.capacity, 
-        price: room.price, status: room.status, description: room.description 
+        price: room.price, status: room.status, gender_type: room.gender_type || 'male', description: room.description 
       });
       setImagePreview(room.image_url ? `http://127.0.0.1:5000${room.image_url}` : '');
     } else {
       setIsEditMode(false);
-      setFormData({ room_id: '', room_name: '', capacity: 4, price: 0, status: 'vacant', description: '' });
+      setFormData({ room_id: '', room_name: '', capacity: 4, price: 0, status: 'vacant', gender_type: 'male', description: '' });
       setImagePreview('');
     }
     setOpen(true);
@@ -95,6 +98,7 @@ export default function RoomManagement() {
     dataToSend.append('capacity', formData.capacity);
     dataToSend.append('price', formData.price);
     dataToSend.append('status', formData.status);
+    dataToSend.append('gender_type', formData.gender_type);
     dataToSend.append('description', formData.description);
     if (imageFile) {
         dataToSend.append('image', imageFile);
@@ -126,6 +130,10 @@ export default function RoomManagement() {
   };
 
   const formatCurrency = (amount) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  const getGenderLabel = (value) => value === 'female' ? 'Female room' : 'Male room';
+  const getGenderChipStyle = (value) => value === 'female'
+    ? { bgcolor: '#fce7f3', color: '#9d174d' }
+    : { bgcolor: '#dbeafe', color: '#1e40af' };
 
   const getStatusChip = (status, current, capacity) => {
     if (status === 'maintenance') return <Chip label="Maintenance" size="small" sx={{ bgcolor: '#fef3c7', color: '#92400e', fontWeight: 'bold' }} />;
@@ -141,7 +149,7 @@ export default function RoomManagement() {
           <Typography variant="body2" sx={{ color: '#6b7280' }}>Manage room categories, images, and capacity</Typography>
         </Box>
         
-        <Stack direction="row" spacing={2} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ width: { xs: '100%', sm: 'auto' } }}>
           <TextField placeholder="Search by name or price..." size="small" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} sx={{ bgcolor: 'white', borderRadius: '12px', width: { xs: '100%', sm: '200px' }}} InputProps={{ startAdornment: ( <InputAdornment position="start"> <SearchIcon sx={{ color: '#94a3b8' }} /> </InputAdornment> ), }} />
           <TextField select size="small" value={priceFilter} onChange={(e) => setPriceFilter(e.target.value)} sx={{ bgcolor: 'white', borderRadius: '12px', minWidth: '160px' }}>
             <MenuItem value="all">All Prices</MenuItem>
@@ -149,7 +157,12 @@ export default function RoomManagement() {
             <MenuItem value="1m_to_2m">1M - 2M</MenuItem>
             <MenuItem value="over2m">Over 2,000,000</MenuItem>
           </TextField>
-          <Button onClick={() => handleOpenModal()} variant="contained" startIcon={<AddHomeWorkIcon />} sx={{ backgroundColor: '#1c3d8c', borderRadius: '12px', textTransform: 'none', fontWeight: 'bold', px: 3, whiteSpace: 'nowrap' }}> Add Room </Button>
+          <TextField select size="small" value={genderFilter} onChange={(e) => setGenderFilter(e.target.value)} sx={{ bgcolor: 'white', borderRadius: '12px', minWidth: '150px' }}>
+            <MenuItem value="all">All Room Types</MenuItem>
+            <MenuItem value="male">Male Rooms</MenuItem>
+            <MenuItem value="female">Female Rooms</MenuItem>
+          </TextField>
+          <Button onClick={() => handleOpenModal()} variant="contained" startIcon={<AddHomeWorkIcon />} sx={{ backgroundColor: '#1c3d8c', borderRadius: '12px', textTransform: 'none', fontWeight: 'bold', px: 3, whiteSpace: 'nowrap', width: { xs: '100%', md: 'auto' } }}> Add Room </Button>
         </Stack>
       </Stack>
 
@@ -159,13 +172,14 @@ export default function RoomManagement() {
             <TableRow>
               <TableCell sx={{ fontWeight: '700', color: '#475569' }}>Room</TableCell>
               <TableCell sx={{ fontWeight: '700', color: '#475569' }}>Capacity</TableCell>
+              <TableCell sx={{ fontWeight: '700', color: '#475569' }}>Room Type</TableCell>
               <TableCell sx={{ fontWeight: '700', color: '#475569' }}>Price</TableCell>
               <TableCell sx={{ fontWeight: '700', color: '#475569' }}>Status</TableCell>
               <TableCell align="center" sx={{ fontWeight: '700', color: '#475569' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {loading ? ( <TableRow><TableCell colSpan={5} align="center" sx={{ py: 8 }}>Loading room list...</TableCell></TableRow> ) : (
+            {loading ? ( <TableRow><TableCell colSpan={6} align="center" sx={{ py: 8 }}>Loading room list...</TableCell></TableRow> ) : (
               filteredRooms.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => (
                 <TableRow key={row.room_id} sx={{ '&:hover': { backgroundColor: '#f1f5f9' }, transition: '0.2s' }}>
                   <TableCell>
@@ -181,6 +195,9 @@ export default function RoomManagement() {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight="600"> {row.current_occupancy} / {row.capacity} <small style={{color: '#94a3b8', fontWeight: 'normal'}}>(Pax)</small> </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={getGenderLabel(row.gender_type)} size="small" sx={{ fontWeight: 'bold', ...getGenderChipStyle(row.gender_type) }} />
                   </TableCell>
                   <TableCell sx={{ fontWeight: 'bold', color: '#1e3a8a' }}>{formatCurrency(row.price)}</TableCell>
                   <TableCell> {getStatusChip(row.status, row.current_occupancy, row.capacity)} </TableCell>
@@ -232,10 +249,14 @@ export default function RoomManagement() {
             </Box>
 
             <TextField label="Room Name" name="room_name" value={formData.room_name} onChange={handleChange} fullWidth variant="outlined" />
-            <Stack direction="row" spacing={2}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField label="Capacity" name="capacity" type="number" value={formData.capacity} onChange={handleChange} fullWidth />
               <TextField label="Price" name="price" type="number" value={formData.price} onChange={handleChange} fullWidth />
             </Stack>
+            <TextField select label="Room Type" name="gender_type" value={formData.gender_type} onChange={handleChange} fullWidth>
+              <MenuItem value="male">Male room</MenuItem>
+              <MenuItem value="female">Female room</MenuItem>
+            </TextField>
             <TextField select label="Status" name="status" value={formData.status} onChange={handleChange} fullWidth>
               <MenuItem value="vacant">Vacant / Available</MenuItem>
               <MenuItem value="maintenance">Under Maintenance</MenuItem>

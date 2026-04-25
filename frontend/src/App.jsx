@@ -17,6 +17,7 @@ import StudentMaintenance from './pages/student/StudentMaintenance';
 import MyRoom from './pages/student/MyRoom'; 
 import Login from './pages/auth/Login';
 import StudentEvents from './pages/student/StudentEvents';
+import StudentPayments from './pages/student/StudentPayments';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const token = localStorage.getItem('token');
@@ -81,7 +82,7 @@ function App() {
             <Route path="dashboard" element={<StudentDashboard />} />
             <Route path="room" element={<MyRoom />} />
             <Route path="maintenance" element={<StudentMaintenance />} />
-            <Route path="payments" element={<h1>Payment</h1>} />
+            <Route path="payments" element={<StudentPayments />} />
             <Route path="events" element={<StudentEvents />} />
           </Route>
 

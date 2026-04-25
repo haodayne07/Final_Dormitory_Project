@@ -8,6 +8,7 @@ class Room(db.Model):
     capacity = db.Column(db.Integer, nullable=False)
     price = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(50), default='vacant')
+    gender_type = db.Column(db.String(10), nullable=False, default='male')
     description = db.Column(db.Text)
     
     image_url = db.Column(db.String(255), nullable=True)

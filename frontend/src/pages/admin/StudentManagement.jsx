@@ -4,7 +4,7 @@ import {
   TableContainer, TableHead, TableRow, Chip, Avatar, Stack, Button,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions, 
   TextField, Tooltip, InputAdornment, 
-  Pagination, PaginationItem 
+  Pagination, PaginationItem, MenuItem
 } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import SearchIcon from '@mui/icons-material/Search';
@@ -25,7 +25,7 @@ export default function StudentManagement() {
   
   const [formData, setFormData] = useState({ 
     user_id: '', username: '', email: '', password: '', 
-    full_name: '', phone: '', student_code: '' 
+    full_name: '', phone: '', student_code: '', gender: 'male'
   });
 
   const API_URL = 'http://127.0.0.1:5000/api/students';
@@ -49,7 +49,8 @@ export default function StudentManagement() {
       s.username?.toLowerCase().includes(term) || 
       s.email?.toLowerCase().includes(term) ||
       s.full_name?.toLowerCase().includes(term) ||
-      s.student_code?.toLowerCase().includes(term)
+      s.student_code?.toLowerCase().includes(term) ||
+      (s.gender === 'female' ? 'female women' : 'male men').includes(term)
     );
   });
 
@@ -58,11 +59,11 @@ export default function StudentManagement() {
       setIsEditMode(true);
       setFormData({ 
         user_id: student.user_id, username: student.username, email: student.email, password: '',
-        full_name: student.full_name || '', phone: student.phone || '', student_code: student.student_code || ''
+        full_name: student.full_name || '', phone: student.phone || '', student_code: student.student_code || '', gender: student.gender || 'male'
       });
     } else {
       setIsEditMode(false);
-      setFormData({ user_id: '', username: '', email: '', password: '', full_name: '', phone: '', student_code: '' });
+      setFormData({ user_id: '', username: '', email: '', password: '', full_name: '', phone: '', student_code: '', gender: 'male' });
     }
     setOpen(true);
   };
@@ -97,6 +98,10 @@ export default function StudentManagement() {
   };
 
   const formatCurrency = (amount) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  const getGenderLabel = (value) => value === 'female' ? 'Female' : 'Male';
+  const getGenderChipStyle = (value) => value === 'female'
+    ? { bgcolor: '#fce7f3', color: '#9d174d' }
+    : { bgcolor: '#dbeafe', color: '#1e40af' };
 
   return (
     <Box sx={{ p: 1 }}>
@@ -106,13 +111,13 @@ export default function StudentManagement() {
           <Typography variant="body2" sx={{ color: '#6b7280' }}>Manage student accommodation profiles</Typography>
         </Box>
         
-        <Stack direction="row" spacing={2} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: { xs: '100%', sm: 'auto' } }}>
           <TextField 
             placeholder="Search by name, email, Student ID..." size="small" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
             sx={{ bgcolor: 'white', borderRadius: '12px', '& .MuiOutlinedInput-root': { borderRadius: '12px' }, width: { xs: '100%', sm: '280px' } }}
             InputProps={{ startAdornment: ( <InputAdornment position="start"> <SearchIcon sx={{ color: '#94a3b8' }} /> </InputAdornment> ) }}
           />
-          <Button onClick={() => handleOpenModal()} variant="contained" startIcon={<PersonAddIcon />} sx={{ backgroundColor: '#1e3a8a', borderRadius: '12px', textTransform: 'none', fontWeight: 'bold', px: 3 }}>
+          <Button onClick={() => handleOpenModal()} variant="contained" startIcon={<PersonAddIcon />} sx={{ backgroundColor: '#1e3a8a', borderRadius: '12px', textTransform: 'none', fontWeight: 'bold', px: 3, whiteSpace: 'nowrap' }}>
             Add New
           </Button>
         </Stack>
@@ -123,6 +128,7 @@ export default function StudentManagement() {
           <TableHead sx={{ backgroundColor: '#f8fafc' }}>
             <TableRow>
               <TableCell sx={{ fontWeight: '700', color: '#475569' }}>Student Profile</TableCell>
+              <TableCell sx={{ fontWeight: '700', color: '#475569' }}>Gender</TableCell>
               <TableCell sx={{ fontWeight: '700', color: '#475569' }}>Contact Info</TableCell>
               <TableCell sx={{ fontWeight: '700', color: '#475569' }}>Room</TableCell>
               <TableCell sx={{ fontWeight: '700', color: '#475569' }}>Wallet Balance</TableCell>
@@ -130,7 +136,7 @@ export default function StudentManagement() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {loading ? ( <TableRow><TableCell colSpan={5} align="center" sx={{ py: 8 }}>Loading data...</TableCell></TableRow> ) : (
+            {loading ? ( <TableRow><TableCell colSpan={6} align="center" sx={{ py: 8 }}>Loading data...</TableCell></TableRow> ) : (
               filteredStudents.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => (
                 <TableRow key={row.user_id} sx={{ '&:hover': { backgroundColor: '#f1f5f9' }, transition: '0.2s' }}>
                   <TableCell>
@@ -143,6 +149,9 @@ export default function StudentManagement() {
                         <Typography variant="caption" color="#64748b" sx={{ display: 'block' }}>Student ID: {row.student_code || 'Not updated'}</Typography>
                       </Box>
                     </Stack>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={getGenderLabel(row.gender)} size="small" sx={{ fontWeight: 'bold', ...getGenderChipStyle(row.gender) }} />
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="#475569">{row.email}</Typography>
@@ -161,7 +170,7 @@ export default function StudentManagement() {
                 </TableRow>
               ))
             )}
-            {filteredStudents.length === 0 && !loading && ( <TableRow><TableCell colSpan={5} align="center" sx={{ py: 4, color: '#94a3b8' }}>No students match the search keyword.</TableCell></TableRow> )}
+            {filteredStudents.length === 0 && !loading && ( <TableRow><TableCell colSpan={6} align="center" sx={{ py: 4, color: '#94a3b8' }}>No students match the search keyword.</TableCell></TableRow> )}
           </TableBody>
         </Table>
 
@@ -180,15 +189,19 @@ export default function StudentManagement() {
         <DialogTitle sx={{ fontWeight: '800', pt: 3, color: '#1e3a8a' }}>{isEditMode ? 'Update Profile' : 'Create Student Profile'}</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2.5} sx={{ mt: 1 }}>
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
               <TextField label="Username" name="username" value={formData.username} onChange={handleChange} fullWidth disabled={isEditMode} size="small" />
               {!isEditMode && <TextField label="Password" name="password" type="password" value={formData.password} onChange={handleChange} fullWidth size="small" />}
             </Box>
             <TextField label="Full Name" name="full_name" value={formData.full_name} onChange={handleChange} fullWidth size="small" />
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
               <TextField label="Student ID" name="student_code" value={formData.student_code} onChange={handleChange} fullWidth size="small" />
               <TextField label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} fullWidth size="small" />
             </Box>
+            <TextField select label="Gender" name="gender" value={formData.gender} onChange={handleChange} fullWidth size="small">
+              <MenuItem value="male">Male</MenuItem>
+              <MenuItem value="female">Female</MenuItem>
+            </TextField>
             <TextField label="Contact Email" name="email" value={formData.email} onChange={handleChange} fullWidth size="small" />
           </Stack>
         </DialogContent>

@@ -49,6 +49,10 @@ export default function ContractManagement() {
   }, [fetchData]);
 
   const formatCurrency = (amount) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  const getGenderLabel = (value) => value === 'female' ? 'Female' : 'Male';
+  const getGenderChipStyle = (value) => value === 'female'
+    ? { bgcolor: '#fce7f3', color: '#9d174d' }
+    : { bgcolor: '#dbeafe', color: '#1e40af' };
 
   const handleTabChange = (event, newValue) => { setTabIndex(newValue); setPage(0); setSearchTerm(''); };
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -91,7 +95,7 @@ export default function ContractManagement() {
 
   return (
     <Box sx={{ p: 1 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} sx={{ mb: 3 }} spacing={2}>
         <Typography variant="h4" fontWeight="900" color="#1e3a8a">Contracts & Requests</Typography>
         
         <TextField 
@@ -130,10 +134,18 @@ export default function ContractManagement() {
                   <TableCell>
                     <Stack direction="row" spacing={1} alignItems="center">
                       <Avatar sx={{ bgcolor: '#1c3d8c', width: 32, height: 32 }}>{row.student_name.charAt(0)}</Avatar>
-                      <Typography variant="body2" fontWeight="600">{row.student_name}</Typography>
+                      <Box>
+                        <Typography variant="body2" fontWeight="600">{row.student_name}</Typography>
+                        <Chip label={getGenderLabel(row.student_gender)} size="small" sx={{ height: 20, fontSize: 11, fontWeight: 'bold', ...getGenderChipStyle(row.student_gender) }} />
+                      </Box>
                     </Stack>
                   </TableCell>
-                  <TableCell>{row.room_name}</TableCell>
+                  <TableCell>
+                    <Stack spacing={0.5}>
+                      <Typography variant="body2">{row.room_name}</Typography>
+                      <Chip label={`${getGenderLabel(row.room_gender_type)} room`} size="small" sx={{ alignSelf: 'flex-start', height: 20, fontSize: 11, fontWeight: 'bold', ...getGenderChipStyle(row.room_gender_type) }} />
+                    </Stack>
+                  </TableCell>
                   <TableCell>{tabIndex === 0 ? row.created_at : `${row.start_date} to ${row.end_date}`}</TableCell>
                   
                   {tabIndex === 1 && (
@@ -192,6 +204,12 @@ export default function ContractManagement() {
         <DialogTitle sx={{ fontWeight: 'bold' }}>Approve Contract</DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>
+            {selectedRequest && (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Chip label={`${getGenderLabel(selectedRequest.student_gender)} student`} size="small" sx={{ fontWeight: 'bold', ...getGenderChipStyle(selectedRequest.student_gender) }} />
+                <Chip label={`${getGenderLabel(selectedRequest.room_gender_type)} room`} size="small" sx={{ fontWeight: 'bold', ...getGenderChipStyle(selectedRequest.room_gender_type) }} />
+              </Stack>
+            )}
             <TextField label="Start Date" name="start_date" type="date" value={formData.start_date} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} />
             <TextField label="End Date" name="end_date" type="date" value={formData.end_date} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} />
             <TextField label="Deposit Amount" name="deposit_amount" type="number" value={formData.deposit_amount} onChange={handleChange} fullWidth />

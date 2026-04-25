@@ -2,12 +2,30 @@ from flask import request, jsonify
 from app.extensions import db
 from app.models.setting_model import Setting
 from app.models.user_model import User
+from werkzeug.security import check_password_hash, generate_password_hash
 import traceback
+
+def get_or_create_setting():
+    setting = Setting.query.first()
+    if setting:
+        return setting
+
+    setting = Setting(
+        electricity_price=3500,
+        water_price=15000,
+        default_deposit=1500000,
+        auto_billing=True,
+        email_notifications=False,
+        maintenance_mode=False
+    )
+    db.session.add(setting)
+    db.session.flush()
+    return setting
 
 def get_settings_logic():
     try:
         # Retrieve the first configuration record
-        setting = Setting.query.first()
+        setting = get_or_create_setting()
         # Retrieve Admin account (assume first user or role='admin')
         admin = User.query.filter_by(role='admin').first() or User.query.first()
         
@@ -34,7 +52,7 @@ def get_settings_logic():
 def update_dorm_config_logic():
     try:
         data = request.get_json()
-        setting = Setting.query.first()
+        setting = get_or_create_setting()
         
         setting.electricity_price = data.get('electricityPrice', setting.electricity_price)
         setting.water_price = data.get('waterPrice', setting.water_price)
@@ -49,7 +67,7 @@ def update_dorm_config_logic():
 def update_system_config_logic():
     try:
         data = request.get_json()
-        setting = Setting.query.first()
+        setting = get_or_create_setting()
         
         setting.auto_billing = data.get('autoBilling', setting.auto_billing)
         setting.email_notifications = data.get('emailNotifications', setting.email_notifications)
@@ -74,8 +92,8 @@ def update_account_logic():
         old_pass = data.get('oldPassword')
         new_pass = data.get('newPassword')
         if old_pass and new_pass:
-            if admin.password == old_pass:
-                admin.password = new_pass
+            if check_password_hash(admin.password, old_pass):
+                admin.password = generate_password_hash(new_pass)
             else:
                 return jsonify({'error': 'Current password is incorrect!'}), 400
                 

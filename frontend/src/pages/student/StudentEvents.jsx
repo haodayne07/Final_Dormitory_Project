@@ -11,6 +11,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import BuildIcon from '@mui/icons-material/Build';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import axios from 'axios';
+import EventCard from '../../components/EventCard';
 
 export default function StudentEvents() {
   const [events, setEvents] = useState([]);
@@ -35,14 +36,6 @@ export default function StudentEvents() {
     fetchData();
   }, [fetchData]);
 
-  // Hàm cấu hình màu sắc và icon theo loại thông báo
-  const getTypeConfig = (type) => {
-    switch(type) {
-      case 'warning': return { icon: <WarningAmberIcon fontSize="small" />, color: '#d97706', bgcolor: '#fef3c7', label: 'Warning' };
-      case 'maintenance': return { icon: <BuildIcon fontSize="small" />, color: '#dc2626', bgcolor: '#fee2e2', label: 'Maintenance' };
-      default: return { icon: <InfoIcon fontSize="small" />, color: '#2563eb', bgcolor: '#dbeafe', label: 'Information' };
-    }
-  };
 
   // Lọc thông báo theo từ khóa tìm kiếm
   const filteredEvents = events.filter(e => 
@@ -92,41 +85,11 @@ export default function StudentEvents() {
           <Grid container spacing={4}>
             {filteredEvents
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((event) => {
-              const config = getTypeConfig(event.type);
-              return (
-                <Grid item xs={12} md={6} lg={4} key={event.event_id}>
-                  <Card sx={{ 
-                    height: '100%', display: 'flex', flexDirection: 'column', borderRadius: '16px', border: '1px solid #f1f5f9', boxShadow: 'none',
-                    transition: '0.3s', '&:hover': { transform: 'translateY(-5px)', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', borderColor: '#cbd5e1' } 
-                  }}>
-                    <CardContent sx={{ p: 4, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                        <Chip 
-                          icon={config.icon} 
-                          label={config.label} 
-                          size="small" 
-                          sx={{ bgcolor: config.bgcolor, color: config.color, fontWeight: 'bold', '& .MuiChip-icon': { color: config.color }, borderRadius: '6px' }} 
-                        />
-                        <Typography variant="caption" fontWeight="bold" color="#94a3b8" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                           {event.event_date}
-                        </Typography>
-                      </Stack>
-                      
-                      <Typography variant="h5" fontWeight="800" color="#1e293b" mb={2} sx={{ lineHeight: 1.4 }}>
-                        {event.title}
-                      </Typography>
-                      
-                      <Box sx={{ p: 2.5, bgcolor: '#f8fafc', borderRadius: '10px', flexGrow: 1, border: '1px solid #f1f5f9' }}>
-                        <Typography variant="body1" color="#475569" sx={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
-                          {event.description}
-                        </Typography>
-                      </Box>
-                    </CardContent>
-                  </Card>
+              .map((event) => (
+                <Grid item xs={12} md={6} lg={4} key={event.event_id} sx={{ display: 'flex' }}>
+                  <EventCard event={event} />
                 </Grid>
-              );
-            })}
+            ))}
           </Grid>
 
           {/* PHÂN TRANG */}

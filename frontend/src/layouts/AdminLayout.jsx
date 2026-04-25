@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import { 
   Box, Drawer as MuiDrawer, List, ListItem, ListItemButton, 
-  ListItemIcon, ListItemText, Typography, IconButton, Divider
+  ListItemIcon, ListItemText, Typography, IconButton, Divider, Avatar, Stack, Chip
 } from '@mui/material';
 
 // Icons
@@ -19,6 +19,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import GroupIcon from '@mui/icons-material/Group';
+import NotificationBell from '../components/NotificationBell';
 
 const drawerWidth = 260;
 
@@ -87,6 +88,8 @@ export default function AdminLayout() {
   const filteredMenuItems = menuItems.filter(item => 
     item.allowedRoles && item.allowedRoles.includes(userRole)
   );
+  const roleLabel = userRole === 'admin' ? 'Administrator' : 'Staff';
+  const roleInitial = userRole === 'admin' ? 'A' : 'S';
 
   const handleDrawerToggle = () => {
     setOpen(!open);
@@ -174,7 +177,46 @@ export default function AdminLayout() {
         </List>
       </Drawer>
 
-      <Box component="main" sx={{ flexGrow: 1, p: 5, backgroundColor: '#ffffff', transition: '0.2s' }}>
+      <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 4 }, backgroundColor: '#ffffff', transition: '0.2s' }}>
+        <Box
+          sx={{
+            mb: 4,
+            px: { xs: 2, md: 3 },
+            py: 2,
+            border: '1px solid #e2e8f0',
+            borderRadius: '16px',
+            display: 'flex',
+            alignItems: { xs: 'flex-start', md: 'center' },
+            justifyContent: 'space-between',
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: 2,
+            bgcolor: '#ffffff',
+            boxShadow: '0 8px 24px rgba(15, 23, 42, 0.04)'
+          }}
+        >
+          <Box>
+            <Typography variant="h6" fontWeight="800" color="#1e293b">
+              {roleLabel} workspace
+            </Typography>
+            <Typography variant="body2" color="#64748b">
+              Announcements, contracts, and operational updates
+            </Typography>
+          </Box>
+
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <NotificationBell
+              onViewAll={() => navigate('/admin/events')}
+              storageKey={`${userRole}_notifications_last_seen_event_id`}
+            />
+            <Chip
+              label={roleLabel}
+              sx={{ bgcolor: '#eff6ff', color: '#1d4ed8', fontWeight: '700', borderRadius: '10px' }}
+            />
+            <Avatar sx={{ width: 38, height: 38, bgcolor: '#1c3d8c', fontWeight: 'bold' }}>
+              {roleInitial}
+            </Avatar>
+          </Stack>
+        </Box>
         <Outlet />
       </Box>
     </Box>

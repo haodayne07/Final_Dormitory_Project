@@ -19,6 +19,7 @@ class User(db.Model):
     full_name = db.Column(db.String(100), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     student_code = db.Column(db.String(20), unique=True, nullable=True)
+    gender = db.Column(db.String(10), nullable=False, default='male')
     
     # Các trường tài chính và hệ thống
     balance = db.Column(db.Float, default=0.0)

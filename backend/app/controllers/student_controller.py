@@ -8,6 +8,12 @@ import traceback
 from datetime import datetime
 from app.models.event_model import Event
 
+VALID_GENDERS = {'male', 'female'}
+
+def normalize_gender(value, default='male'):
+    normalized = str(value or default).strip().lower()
+    return normalized if normalized in VALID_GENDERS else default
+
 # 1. READ: Get student list
 def get_all_students_logic():
     try:
@@ -33,6 +39,9 @@ def get_all_students_logic():
                 "username": student.username,
                 "full_name": getattr(student, 'full_name', student.username),
                 "email": student.email,
+                "phone": getattr(student, 'phone', '') or '',
+                "student_code": getattr(student, 'student_code', '') or '',
+                "gender": normalize_gender(getattr(student, 'gender', 'male')),
                 "balance": float(getattr(student, 'balance', 0)),
                 "room": room_name,
                 "status": "active" if contract else "pending"
@@ -57,21 +66,25 @@ def create_student_logic():
         # Check Duplicate Email
         if User.query.filter_by(email=data['email']).first():
             return jsonify({"error": f"Email address '{data['email']}' is already in use!"}), 400
+        student_code = data.get('student_code') or None
+        if student_code and User.query.filter_by(student_code=student_code).first():
+            return jsonify({"error": "This student ID already exists!"}), 400
 
-        hashed_pw = generate_password_hash(data.get('password', '123456'))
+        hashed_pw = generate_password_hash(data.get('password') or '123456')
         
         # Create new User object
         new_student = User(
             username=data['username'],
             email=data['email'],
             password=hashed_pw,
-            role='student'
+            role='student',
+            full_name=data.get('full_name') or data.get('username'),
+            phone=data.get('phone', ''),
+            student_code=student_code,
+            gender=normalize_gender(data.get('gender'))
         )
         
-        # Only assign attributes if they exist in the Model
-        if hasattr(new_student, 'full_name'): new_student.full_name = data.get('username')
         if hasattr(new_student, 'balance'): new_student.balance = 0.0
-        if hasattr(new_student, 'phone'): new_student.phone = ""
 
         db.session.add(new_student)
         db.session.commit()
@@ -95,7 +108,16 @@ def update_student_logic(user_id):
                 return jsonify({"error": "This email address is already used by another user!"}), 400
             user.email = data['email']
 
+        incoming_student_code = data.get('student_code') or None
+        if 'student_code' in data and incoming_student_code != getattr(user, 'student_code', None):
+            existing_code = User.query.filter_by(student_code=incoming_student_code).first() if incoming_student_code else None
+            if existing_code:
+                return jsonify({"error": "This student ID is already used by another student!"}), 400
+
         if 'full_name' in data: user.full_name = data['full_name']
+        if 'phone' in data: user.phone = data['phone']
+        if 'student_code' in data: user.student_code = incoming_student_code
+        if 'gender' in data: user.gender = normalize_gender(data.get('gender'), getattr(user, 'gender', 'male'))
         
         db.session.commit()
         return jsonify({"message": "Updated successfully!"}), 200
@@ -141,8 +163,9 @@ def get_student_dashboard_logic(student_id):
         pending_request = RentalRequest.query.filter_by(user_id=student_id, status='pending').first()
         has_pending_request = bool(pending_request)
 
+        student_gender = normalize_gender(getattr(student, 'gender', 'male'))
         room_info = {"name": "No room assigned", "type": "N/A", "endDate": "N/A"}
-        billing_info = {"status": "paid", "amount": 0, "dueDate": "", "month": ""}
+        billing_info = {"id": None, "status": "paid", "amount": 0, "dueDate": "", "month": "", "title": ""}
         available_rooms_data = []
 
         if has_room:
@@ -161,14 +184,20 @@ def get_student_dashboard_logic(student_id):
             if unpaid_bill:
                 b_date = unpaid_bill.due_date
                 billing_info = {
+                    "id": unpaid_bill.bill_id,
                     "status": "unpaid",
                     "amount": unpaid_bill.amount,
                     "dueDate": b_date.strftime('%d/%m/%Y') if b_date else "N/A",
-                    "month": f"Month {b_date.month if b_date else datetime.now().month}"
+                    "month": f"Month {b_date.month if b_date else datetime.now().month}",
+                    "title": unpaid_bill.title
                 }
         elif not has_pending_request:
             available_rooms = Room.query.filter(Room.status.in_(['Trống', 'available', 'trống', 'vacant', 'Vacant'])).all()
-            
+            available_rooms = [
+                room for room in available_rooms
+                if normalize_gender(getattr(room, 'gender_type', 'male')) == student_gender
+            ]
+
             for r in available_rooms:
                 current_tenants = Contract.query.filter_by(room_id=r.room_id, status='active').count() 
                 amenities_list = [d.devices_name for d in r.devices] if hasattr(r, 'devices') and r.devices else []
@@ -179,6 +208,7 @@ def get_student_dashboard_logic(student_id):
                     "capacity": r.capacity,
                     "current_tenants": current_tenants,
                     "price": getattr(r, 'price', 1500000), 
+                    "gender_type": normalize_gender(getattr(r, 'gender_type', 'male')),
                     "image_url": getattr(r, 'image_url', None), 
                     "amenities": amenities_list
                 })
@@ -213,6 +243,7 @@ def get_student_dashboard_logic(student_id):
 
         return jsonify({
             'studentName': getattr(student, 'full_name', student.username) or student.username,
+            'studentGender': student_gender,
             'hasRoom': has_room,                         
             'hasPendingRequest': has_pending_request,    
             'availableRooms': available_rooms_data,      
@@ -235,6 +266,24 @@ def request_room_logic():
         
         if not user_id or not room_id:
             return jsonify({'error': 'Missing user or room information'}), 400
+
+        student = User.query.get(user_id)
+        room = Room.query.get(room_id)
+        if not student or not room:
+            return jsonify({'error': 'Student or room not found'}), 404
+
+        student_gender = normalize_gender(getattr(student, 'gender', 'male'))
+        room_gender = normalize_gender(getattr(room, 'gender_type', 'male'))
+        if student_gender != room_gender:
+            return jsonify({'error': 'This student can only request rooms that match their gender.'}), 400
+
+        current_tenants = Contract.query.filter_by(room_id=room.room_id, status='active').count()
+        if current_tenants >= room.capacity:
+            return jsonify({'error': 'This room is already full.'}), 400
+
+        active_contract = Contract.query.filter_by(user_id=user_id, status='active').first()
+        if active_contract:
+            return jsonify({'error': 'This student already has an active room.'}), 400
 
         # Check for existing pending requests
         exist = RentalRequest.query.filter_by(user_id=user_id, status='pending').first()
@@ -300,6 +349,7 @@ def get_my_room_details_logic(student_id):
                 "capacity": room.capacity,
                 "current_tenants": len(roommates),
                 "price": room.price,
+                "gender_type": normalize_gender(getattr(room, 'gender_type', 'male')),
                 "image_url": getattr(room, 'image_url', None)
             },
             "contract_info": {

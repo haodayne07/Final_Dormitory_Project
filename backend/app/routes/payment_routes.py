@@ -4,6 +4,7 @@ from app.controllers.payment_controller import (
     get_all_bills_logic,
     pay_bill_logic,
     get_payment_history_logic,
+    get_student_payment_history_logic,
     create_single_bill_logic,
     auto_generate_bills_api_logic,
     create_momo_payment_logic,
@@ -30,6 +31,11 @@ def handle_pay_bill(bill_id):
 def handle_get_history():
     if request.method == 'OPTIONS': return jsonify({'status': 'ok'}), 200
     return get_payment_history_logic()
+
+@payment_bp.route('/student/<int:student_id>', methods=['GET', 'OPTIONS'], strict_slashes=False)
+def handle_get_student_history(student_id):
+    if request.method == 'OPTIONS': return jsonify({'status': 'ok'}), 200
+    return get_student_payment_history_logic(student_id)
 
 @payment_bp.route('/create', methods=['POST', 'OPTIONS'], strict_slashes=False)
 @require_role('admin', 'staff')

@@ -6,6 +6,12 @@ from app.models.room_model import Room
 from datetime import datetime
 import traceback
 
+VALID_GENDERS = {'male', 'female'}
+
+def normalize_gender(value, default='male'):
+    normalized = str(value or default).strip().lower()
+    return normalized if normalized in VALID_GENDERS else default
+
 # ==========================================
 # PART 1: RENTAL REQUESTS MANAGEMENT
 # ==========================================
@@ -25,8 +31,10 @@ def get_all_requests_logic():
                 'request_id': req.request_id,
                 'user_id': req.user_id,
                 'student_name': student.full_name or student.username if student else "Unknown",
+                'student_gender': normalize_gender(getattr(student, 'gender', 'male')) if student else 'male',
                 'room_id': req.room_id,
                 'room_name': room.room_name if room else "Unknown",
+                'room_gender_type': normalize_gender(getattr(room, 'gender_type', 'male')) if room else 'male',
                 'created_at': req.created_at.strftime('%Y-%m-%d %H:%M') if req.created_at else "",
                 'status': req.status
             })
@@ -74,6 +82,17 @@ def process_request_logic(request_id):
             room = Room.query.get(req.room_id)
             if not room:
                 return jsonify({'error': 'Room does not exist!'}), 404
+
+            student = User.query.get(req.user_id)
+            if not student:
+                return jsonify({'error': 'Student does not exist!'}), 404
+
+            if normalize_gender(getattr(student, 'gender', 'male')) != normalize_gender(getattr(room, 'gender_type', 'male')):
+                return jsonify({'error': 'Student gender does not match this room type!'}), 400
+
+            active_contract = Contract.query.filter_by(user_id=req.user_id, status='active').first()
+            if active_contract:
+                return jsonify({'error': 'This student already has an active contract!'}), 400
                 
             current_occupancy = Contract.query.filter_by(room_id=room.room_id, status='active').count()
             if current_occupancy >= room.capacity:
@@ -119,8 +138,10 @@ def get_all_contracts_logic():
                 'contract_id': c.contract_id,
                 'user_id': c.user_id,
                 'student_name': student.full_name or student.username if student else "Unknown",
+                'student_gender': normalize_gender(getattr(student, 'gender', 'male')) if student else 'male',
                 'room_id': c.room_id,
                 'room_name': room.room_name if room else "Unknown",
+                'room_gender_type': normalize_gender(getattr(room, 'gender_type', 'male')) if room else 'male',
                 'start_date': c.start_date.strftime('%Y-%m-%d') if c.start_date else "",
                 'end_date': c.end_date.strftime('%Y-%m-%d') if c.end_date else "",
                 'deposit_amount': float(c.deposit_amount) if c.deposit_amount else 0,

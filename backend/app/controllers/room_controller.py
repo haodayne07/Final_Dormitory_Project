@@ -6,6 +6,12 @@ from app.extensions import db
 from datetime import datetime
 import traceback
 
+VALID_ROOM_GENDERS = {'male', 'female'}
+
+def normalize_room_gender(value, default='male'):
+    normalized = str(value or default).strip().lower()
+    return normalized if normalized in VALID_ROOM_GENDERS else default
+
 # Configure upload folders for rooms and devices
 UPLOAD_FOLDER = 'static/uploads/rooms'
 DEVICE_UPLOAD_FOLDER = 'static/uploads/devices'
@@ -138,6 +144,7 @@ def get_all_rooms_logic():
                 'current_occupancy': current_occupancy,
                 'price': float(r.price),
                 'status': r.status,
+                'gender_type': normalize_room_gender(getattr(r, 'gender_type', 'male')),
                 'description': r.description or "",
                 'image_url': getattr(r, 'image_url', "") or "" 
             })
@@ -168,6 +175,7 @@ def add_room_logic():
             capacity=data.get('capacity'),
             price=data.get('price'),
             status=data.get('status', 'vacant'),
+            gender_type=normalize_room_gender(data.get('gender_type')),
             description=data.get('description', ''),
             image_url=image_url
         )
@@ -191,6 +199,7 @@ def update_room_logic(room_id):
         if 'capacity' in data: room.capacity = data.get('capacity')
         if 'price' in data: room.price = data.get('price')
         if 'status' in data: room.status = data.get('status')
+        if 'gender_type' in data: room.gender_type = normalize_room_gender(data.get('gender_type'), getattr(room, 'gender_type', 'male'))
         if 'description' in data: room.description = data.get('description')
         
         if 'image' in request.files:
@@ -227,7 +236,11 @@ def delete_room_logic(room_id):
 # ==========================================
 def get_vacant_rooms_logic():
     rooms = Room.query.filter_by(status='vacant').all()
-    return jsonify([{'id': r.room_id, 'name': r.room_name} for r in rooms]), 200
+    return jsonify([{
+        'id': r.room_id,
+        'name': r.room_name,
+        'gender_type': normalize_room_gender(getattr(r, 'gender_type', 'male'))
+    } for r in rooms]), 200
 
 def get_room_details_logic(id):
     room = Room.query.get_or_404(id)
